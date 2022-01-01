@@ -30,3 +30,18 @@ def insert_result_db(settings_id, content, is_valid, cursor, connection):
     cursor.execute("INSERT INTO results (settings_id, content, is_valid) "
                    "VALUES (%s, %s, %s)", (settings_id, content, is_valid))
     connection.commit()
+
+
+@with_cursor
+def insert_to_queue(settings_id, url, cursor, connection):
+    cursor.execute("INSERT INTO queue (settings_id, url) "
+                   "VALUES (%s, %s)", (settings_id, url))
+    connection.commit()
+
+
+@with_cursor
+def select_from_queue(cursor):
+    cursor.execute("SELECT * FROM queue LIMIT 1000")
+    records = cursor.fetchall()
+
+    return records
