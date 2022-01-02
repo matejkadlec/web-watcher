@@ -1,4 +1,5 @@
 import mysql.connector
+from datetime import datetime
 
 
 def with_cursor(f):
@@ -34,18 +35,40 @@ def insert_many_settings_db(settings_list, cursor, connection):
 
 
 @with_cursor
-def insert_result_db(settings_id, url, content, is_valid, cursor, connection):
-    cursor.execute("INSERT INTO results (settings_id, url, content, is_valid) "
-                   "VALUES (%s, %s, %s, %s)", (settings_id, url, content, is_valid))
+def insert_result_db(settings_id, url, content, is_valid, difference, error, cursor, connection):
+    cursor.execute("INSERT INTO results (settings_id, url, content, is_valid, difference, created) "
+                   "VALUES (%s, %s, %s, %s, %s, %s, %s)", (settings_id, url, content, is_valid, difference, datetime.now(), error))
     connection.commit()
 
 
 @with_cursor
 def insert_many_results_db(results_list, cursor, connection):
-    sql_statement = "INSERT INTO results (settings_id, url, content, is_valid) " \
-                    "VALUES (%s, %s, %s, %s)"
+    sql_statement = "INSERT INTO results (settings_id, url, content, is_valid, difference, created, error) " \
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s)"
     cursor.executemany(sql_statement, results_list)
     connection.commit()
+
+
+@with_cursor
+def select_results_db(cursor, connection):
+    cursor.execute("SELECT r1.* "
+                   "FROM results r1 "
+                   "INNER JOIN "
+                   "( "
+                   "    SELECT MAX(created) MaxResultDate "
+                   "    FROM results "
+                   "    INNER JOIN settings s1 "
+                   "        ON settings_id = s1.id "
+                   "            AND s1.last_run IS NULL "
+                   "            OR TIMESTAMPDIFF(SECOND, last_run, SYSDATE()) > s1.`interval` "
+                   "     WHERE error IS NULL "
+                   "     GROUP BY settings_id "
+                   ") r2 "
+                   "    ON r1.created = r2.MaxResultDate "
+                   "WHERE r1.error IS NULL "
+                   "ORDER BY r1.created DESC")
+    records = cursor.fetchall()
+    return records
 
 
 @with_cursor
