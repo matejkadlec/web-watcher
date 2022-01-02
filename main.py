@@ -1,4 +1,4 @@
-from settings import insert_initial_settings
+from settings import init_settings
 
 if __name__ == "__main__":
     pass
