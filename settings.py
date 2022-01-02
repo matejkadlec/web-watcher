@@ -1,8 +1,9 @@
 from database import insert_settings_db, insert_many_settings_db, insert_result_db, insert_many_queues_db
-from queue_processing import get_content
+from queue_processing import ERROR_MESSAGE, get_content
 import sys
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 
 settings_id = 0
@@ -29,7 +30,11 @@ def init_settings():
     else:
         # if not, get the content and save it to db
         content = get_content(url)
-        insert_result_db(settings_id, url, content, 1)
+        if ERROR_MESSAGE in content:
+            exception = content.split('.', 1)[1]
+            insert_result_db(settings_id, url, ERROR_MESSAGE, 0, None, datetime.today(), exception)
+        else:
+            insert_result_db(settings_id, url, content, 1, None, datetime.today(), None)
 
     # insert remaining settings and urls to db
     if settings_list:
@@ -96,3 +101,6 @@ def parse_sitemap(settings_type, url, interval):
         append_settings(settings_type, sitemap_url, interval)
     for url in urls:
         append_settings(settings_type, url, interval)
+
+
+# init_settings()
