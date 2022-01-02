@@ -1,6 +1,6 @@
 from database import insert_settings_db, insert_many_settings_db, insert_result_db, insert_many_queues_db
+from queue_processing import get_content
 import sys
-import gzip
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 
@@ -29,7 +29,7 @@ def init_settings():
     else:
         # if not, get the content and save it to db
         content = get_content(url)
-        insert_result_db(settings_id, content, 1)
+        insert_result_db(settings_id, url, content, 1)
 
     # insert remaining settings and urls to db
     if settings_list:
@@ -96,19 +96,3 @@ def parse_sitemap(settings_type, url, interval):
         append_settings(settings_type, sitemap_url, interval)
     for url in urls:
         append_settings(settings_type, url, interval)
-
-
-def get_content(url):
-    req = Request(url)
-    # some urls have their content zipped
-    try:
-        html = gzip.decompress(urlopen(req).read()).decode('utf-8')
-    except gzip.BadGzipFile:
-        html = urlopen(req).read().decode('utf-8')
-    # make BeautifulSoup from html
-    soup = BeautifulSoup(html, features="html.parser")
-    # return plain text
-    return soup.get_text()
-
-
-init_settings()
