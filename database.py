@@ -34,15 +34,15 @@ def insert_many_settings_db(settings_list, cursor, connection):
 
 
 @with_cursor
-def insert_result_db(settings_id, content, is_valid, cursor, connection):
-    cursor.execute("INSERT INTO results (settings_id, content, is_valid) "
-                   "VALUES (%s, %s, %s)", (settings_id, content, is_valid))
+def insert_result_db(settings_id, url, content, is_valid, cursor, connection):
+    cursor.execute("INSERT INTO results (settings_id, url, content, is_valid) "
+                   "VALUES (%s, %s, %s, %s)", (settings_id, url, content, is_valid))
     connection.commit()
 
 
 @with_cursor
 def insert_many_results_db(results_list, cursor, connection):
-    sql_statement = "INSERT INTO settings (`type`, url, is_sitemap, `interval`) " \
+    sql_statement = "INSERT INTO results (settings_id, url, content, is_valid) " \
                     "VALUES (%s, %s, %s, %s)"
     cursor.executemany(sql_statement, results_list)
     connection.commit()
@@ -58,12 +58,12 @@ def insert_many_queues_db(queue_list, cursor, connection):
 
 @with_cursor
 def select_from_queue(cursor, connection):
-    cursor.execute("SELECT * FROM queue LIMIT 1000")
+    cursor.execute("SELECT * FROM queue LIMIT 10")
     records = cursor.fetchall()
     return records
 
 
 @with_cursor
 def delete_from_queue(cursor, connection):
-    cursor.execute("DELETE FROM queue LIMIT 1000")
+    cursor.execute("DELETE FROM queue LIMIT 10")
     connection.commit()
