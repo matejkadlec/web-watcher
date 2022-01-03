@@ -6,7 +6,7 @@ import telegram_send
 
 def compare_results():
     results_list = []
-    # get all results from db (for which settings meets given conditions)
+    # get all results from db (for which setting meets given conditions)
     results = select_results_db()
     for result in results:
         # parse current content
@@ -38,4 +38,4 @@ def compare_results():
     insert_many_results_db(results_list)
 
 
-# compare_results()
+compare_results()

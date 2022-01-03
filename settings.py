@@ -103,4 +103,4 @@ def parse_sitemap(settings_type, url, interval):
         append_settings(settings_type, url, interval)
 
 
-# init_settings()
+init_settings()

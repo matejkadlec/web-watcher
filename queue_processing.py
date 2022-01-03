@@ -55,4 +55,4 @@ def get_content(url):
     return soup.get_text()
 
 
-# process_queue()
+process_queue()

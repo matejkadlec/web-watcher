@@ -60,7 +60,7 @@ def select_results_db(cursor, connection):
                    "    INNER JOIN settings s1 "
                    "        ON settings_id = s1.id "
                    "            AND s1.last_run IS NULL "
-                   "            OR TIMESTAMPDIFF(SECOND, last_run, SYSDATE()) > s1.`interval` "
+                   "            OR TIMESTAMPDIFF(HOUR, last_run, SYSDATE()) > s1.`interval` "
                    "     WHERE error IS NULL "
                    "     GROUP BY settings_id "
                    ") r2 "
