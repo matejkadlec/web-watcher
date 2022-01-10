@@ -4,11 +4,11 @@ from datetime import datetime
 
 def with_cursor(f):
     def wrapper(*args):
-        connection = mysql.connector.connect(host='127.0.0.1',
+        connection = mysql.connector.connect(host='localhost',
                                              port='3306',
-                                             database='root',
-                                             user='root',
-                                             password='posote19')
+                                             database='scrapemonitor',
+                                             user='ScrapeMonitor',
+                                             password='SRY5JJ3E3AasFTKD')
         cursor = connection.cursor()
 
         values = f(*args, cursor, connection)
@@ -60,7 +60,7 @@ def select_results_db(cursor, connection):
                    "    INNER JOIN settings s1 "
                    "        ON settings_id = s1.id "
                    "            AND s1.last_run IS NULL "
-                   "            OR TIMESTAMPDIFF(HOUR, last_run, SYSDATE()) > s1.`interval` "
+                   "            OR TIMESTAMPDIFF(HOUR, last_run, SYSDATE()) >= s1.`interval` "
                    "     WHERE error IS NULL "
                    "     GROUP BY settings_id "
                    ") r2 "

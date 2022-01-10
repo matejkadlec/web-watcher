@@ -76,9 +76,9 @@ def append_settings(settings_type, url, interval):
             queue_list = []
 
 
-def parse_sitemap(settings_type, url, interval):
+def parse_sitemap(settings_type, base_url, interval):
     # get sitemap as xml
-    req = Request(url)
+    req = Request(base_url)
     xml = urlopen(req).read()
     soup = BeautifulSoup(xml, features="html.parser")
 
