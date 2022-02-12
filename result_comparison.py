@@ -8,9 +8,12 @@ def compare_results():
     results_list = []
     # get all results from db (for which setting meets given conditions)
     results = select_results_db()
+
     for result in results:
         # parse current content
         content = get_content(result[2])
+        content = ' '.join(content.split())
+
         # append result to the results_list for it to be inserted to db later
         if ERROR_MESSAGE in content:
             # if there was an error, replace content with ERROR_MESSAGE and add retrieved exception
@@ -23,17 +26,19 @@ def compare_results():
             # contents don't match
             old = ""
             new = ""
-            # get first 50 characters since first difference
+            # get first 200 characters since first difference
             for i in range(min(len(content), len(result[3]))):
                 if content[i] != result[3][i]:
-                    old += result[3][i]
-                    new += content[i]
-                if len(old) >= 50:
+                    for j in range(0, 200):
+                        old += result[3][i + j]
+                        new += content[i + j]
                     break
-            difference = f"OLD VALUE: \n{old.strip()}...\n\nNEW VALUE: \n{new.strip()}..."
+            difference = f"OLD VALUE: \n-> {old}...\n\nNEW VALUE: \n-> {new}..."
+
             # send message on telegram
             telegram_send.send(messages=[f"Content of URL {result[2]} has changed.\n\n{difference}"])
             results_list.append(tuple((result[1], result[2], content, 0, difference, datetime.now(), None)))
+
     # insert results to db
     insert_many_results_db(results_list)
 

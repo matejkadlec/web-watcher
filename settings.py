@@ -1,3 +1,4 @@
+import urllib.error
 from database import insert_settings_db, insert_many_settings_db, insert_result_db, insert_many_queues_db
 from queue_processing import ERROR_MESSAGE, get_content
 import sys
@@ -30,6 +31,7 @@ def init_settings():
     else:
         # if not, get the content and save it to db
         content = get_content(url)
+        content = ' '.join(content.split())
         if ERROR_MESSAGE in content:
             exception = content.split('.', 1)[1]
             insert_result_db(settings_id, url, ERROR_MESSAGE, 0, None, datetime.today(), exception)
@@ -78,8 +80,11 @@ def append_settings(settings_type, url, interval):
 
 def parse_sitemap(settings_type, base_url, interval):
     # get sitemap as xml
-    req = Request(base_url)
-    xml = urlopen(req).read()
+    req = Request(base_url, headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        xml = urlopen(req).read()
+    except urllib.error.HTTPError:
+        return
     soup = BeautifulSoup(xml, features="html.parser")
 
     # initialize lists for sitemaps and urls for current sitemap

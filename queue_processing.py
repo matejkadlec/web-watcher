@@ -16,9 +16,12 @@ def process_queue():
         results_list = []
         # select records from queue
         queues = select_from_queue()
+
         for queue in queues:
             # parse page content
             content = get_content(queue[2])
+            content = ' '.join(content.split())
+
             # append result to the results_list for it to be inserted to db later
             if ERROR_MESSAGE in content:
                 # if there was an error, replace content with ERROR_MESSAGE and add retrieved exception
@@ -26,6 +29,7 @@ def process_queue():
                 results_list.append(tuple((queue[1], queue[2], ERROR_MESSAGE, 0, None, datetime.now(), exception)))
             else:
                 results_list.append(tuple((queue[1], queue[2], content, 1, None, datetime.now(), None)))
+
         # after loop is finished, insert results to db and clear queue
         insert_many_results_db(results_list)
         delete_from_queue()
@@ -33,7 +37,7 @@ def process_queue():
 
 def get_content(url):
     global ERROR_MESSAGE
-    req = Request(url)
+    req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
 
     # get HTML of compressed page
     try:
