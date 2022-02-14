@@ -1,5 +1,6 @@
 import urllib.error
-from database import insert_settings_db, insert_many_settings_db, insert_result_db, insert_many_queues_db
+from database import select_from_settings, insert_settings_db, insert_many_settings_db, insert_result_db, \
+    insert_many_queues_db
 from queue_processing import ERROR_CODE, get_content
 import sys
 from urllib.request import Request, urlopen
@@ -9,12 +10,14 @@ from datetime import datetime
 
 settings_id = 0
 settings_list = []
+settings_list_db = select_from_settings()
 queue_list = []
 
 
 def init_settings():
     global settings_id
     global settings_list
+    global settings_list_db
     global queue_list
 
     # get settings parameters
@@ -23,18 +26,27 @@ def init_settings():
     is_sitemap = 1 if url.endswith(".xml") else 0
     interval = int(sys.argv[3])
 
+    # check if settings already is in db
+    insert_initial = True
+    for settings_db in settings_list_db:
+        if settings_db[2] == url:
+            insert_initial = False
+
     # insert initial settings to db and get its id
-    settings_id = insert_settings_db(settings_type, url, is_sitemap, interval)
+    if insert_initial:
+        settings_id = insert_settings_db(settings_type, url, is_sitemap, interval)
+
     if is_sitemap:
         # if current url is sitemap, get urls on that sitemap
         parse_sitemap(settings_type, url, interval)
-    else:
+    elif insert_initial:
         # if not, get the content and save it to db
         response, title, description, robots, image, content = get_content(url)
 
         if ERROR_CODE in content:
+            # if url wasn't parsed successfully
             exception = content.split('.', 1)[1]
-            insert_result_db(settings_id, url, datetime.now(), None, None, None, None, None, None, 0, None, 0, exception)
+            insert_result_db(settings_id, url, datetime.now(), response, None, None, None, None, None, 0, None, 0, exception)
         else:
             insert_result_db(settings_id, url, datetime.now(), response, title, description, robots, image, content, 0, None, 1, None)
 
@@ -48,13 +60,23 @@ def init_settings():
 def append_settings(settings_type, url, interval):
     global settings_id
     global settings_list
+    global settings_list_db
     global queue_list
+
+    for settings_db in settings_list_db:
+        if settings_db[2] == url:
+            return
 
     # decide whether current url is sitemap or not
     is_sitemap = 1 if url.endswith(".xml") else 0
 
-    # append settings to settings_list for it to be inserted to db later
-    settings_list.append(tuple((settings_type, url, is_sitemap, interval)))
+    if settings_id == 0:
+        # if no settings was inserted yet
+        settings_id = insert_settings_db(settings_type, url, is_sitemap, interval)
+    else:
+        # append settings to settings_list for it to be inserted to db later
+        settings_list.append(tuple((settings_type, url, is_sitemap, interval)))
+
     # if settings_list has 10k or more items, insert them to db and clear the list
     if len(settings_list) >= 10000:
         insert_many_settings_db(settings_list)

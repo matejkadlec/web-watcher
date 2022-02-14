@@ -1,5 +1,4 @@
 import mysql.connector
-from datetime import datetime
 
 
 def with_cursor(f):
@@ -16,6 +15,13 @@ def with_cursor(f):
         connection.close()
         return values
     return wrapper
+
+
+@with_cursor
+def select_from_settings(cursor, connection):
+    cursor.execute("SELECT * FROM settings")
+    records = cursor.fetchall()
+    return records
 
 
 @with_cursor

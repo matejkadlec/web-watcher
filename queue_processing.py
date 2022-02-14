@@ -27,8 +27,8 @@ def process_queue():
             # append result to the results_list for it to be inserted to db later
             if ERROR_CODE in content:
                 # if there was an error, replace content with ERROR_MESSAGE and add retrieved exception
-                exception = content.split('.', 1)[1]
-                results_list.append(tuple((queue[1], queue[2], datetime.now(), None, None, None, None,
+                exception = content.split('KZ7h84UJ4v', 1)[1]
+                results_list.append(tuple((queue[1], queue[2], datetime.now(), response, None, None, None,
                                            None, None, 0, None, 0, exception)))
             else:
                 results_list.append(tuple((queue[1], queue[2], datetime.now(), response, title, description, robots,
@@ -42,22 +42,21 @@ def process_queue():
 def get_content(url):
     global ERROR_CODE
     req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    response = urlopen(req).code
 
     # get HTML of compressed page
     try:
         html = gzip.decompress(urlopen(req).read()).decode('utf-8')
-        response = urlopen(req).code
-    # if it's not compressed
+    # if isn't compressed
     except gzip.BadGzipFile:
         try:
             html = urlopen(req).read().decode('utf-8')
-            response = urlopen(req).code
         # any exception
         except Exception as e:
-            return None, None, None, None, None, ERROR_CODE + str(e)
+            return response, None, None, None, None, ERROR_CODE + str(e)
     # any other exception
     except Exception as e:
-        return None, None, None, None, None, ERROR_CODE + str(e)
+        return response, None, None, None, None, ERROR_CODE + str(e)
 
     # make BeautifulSoup from html
     soup = BeautifulSoup(html, features="html.parser")
@@ -79,7 +78,8 @@ def get_content(url):
     hidden_tags = soup.select('.hidden')
     content = soup.get_text()
     for hidden_tag in hidden_tags:
-        content = content.replace(hidden_tag.string, "")
+        if hidden_tag.string:
+            content = content.replace(hidden_tag.string, "")
 
     # remove line breaks and empty spaces
     content = ' '.join(content.split())
