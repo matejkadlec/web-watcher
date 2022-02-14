@@ -1,15 +1,18 @@
+#!/usr/bin/python3
 from database import select_from_queue, delete_from_queue, insert_many_results_db
 import gzip
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from datetime import datetime
+import ssl
 
 
-ERROR_MESSAGE = "Couldn't parse web page content, see error for details."
+ssl._create_default_https_context = ssl._create_unverified_context
+ERROR_CODE = "HSp6625YJuKZ7h84UJ4v"
 
 
 def process_queue():
-    global ERROR_MESSAGE
+    global ERROR_CODE
 
     # while there are any records in queue table
     while select_from_queue():
@@ -19,16 +22,17 @@ def process_queue():
 
         for queue in queues:
             # parse page content
-            content = get_content(queue[2])
-            content = ' '.join(content.split())
+            response, title, description, robots, image, content = get_content(queue[2])
 
             # append result to the results_list for it to be inserted to db later
-            if ERROR_MESSAGE in content:
+            if ERROR_CODE in content:
                 # if there was an error, replace content with ERROR_MESSAGE and add retrieved exception
                 exception = content.split('.', 1)[1]
-                results_list.append(tuple((queue[1], queue[2], ERROR_MESSAGE, 0, None, datetime.now(), exception)))
+                results_list.append(tuple((queue[1], queue[2], datetime.now(), None, None, None, None,
+                                           None, None, 0, None, 0, exception)))
             else:
-                results_list.append(tuple((queue[1], queue[2], content, 1, None, datetime.now(), None)))
+                results_list.append(tuple((queue[1], queue[2], datetime.now(), response, title, description, robots,
+                                           image, content, 0, None, 1, None)))
 
         # after loop is finished, insert results to db and clear queue
         insert_many_results_db(results_list)
@@ -36,27 +40,51 @@ def process_queue():
 
 
 def get_content(url):
-    global ERROR_MESSAGE
+    global ERROR_CODE
     req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
 
     # get HTML of compressed page
     try:
         html = gzip.decompress(urlopen(req).read()).decode('utf-8')
+        response = urlopen(req).code
     # if it's not compressed
     except gzip.BadGzipFile:
         try:
             html = urlopen(req).read().decode('utf-8')
+            response = urlopen(req).code
         # any exception
         except Exception as e:
-            return ERROR_MESSAGE + str(e)
+            return None, None, None, None, None, ERROR_CODE + str(e)
     # any other exception
     except Exception as e:
-        return ERROR_MESSAGE + str(e)
+        return None, None, None, None, None, ERROR_CODE + str(e)
 
     # make BeautifulSoup from html
     soup = BeautifulSoup(html, features="html.parser")
-    # return plain text
-    return soup.get_text()
+
+    # title
+    title = soup.find("title").string
+
+    # description, robots, og:image
+    description = robots = image = ''
+    for tag in soup.find_all("meta"):
+        if tag.get("name") == "description":
+            description = tag.get("content")
+        elif tag.get("name") == "robots":
+            robots = tag.get("content")
+        elif tag.get("property") == "og:image":
+            image = tag.get("content")
+
+    # content
+    hidden_tags = soup.select('.hidden')
+    content = soup.get_text()
+    for hidden_tag in hidden_tags:
+        content = content.replace(hidden_tag.string, "")
+
+    # remove line breaks and empty spaces
+    content = ' '.join(content.split())
+
+    return response, title, description, robots, image, content
 
 
 process_queue()

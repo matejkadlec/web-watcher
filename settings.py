@@ -1,6 +1,6 @@
 import urllib.error
 from database import insert_settings_db, insert_many_settings_db, insert_result_db, insert_many_queues_db
-from queue_processing import ERROR_MESSAGE, get_content
+from queue_processing import ERROR_CODE, get_content
 import sys
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
@@ -30,13 +30,13 @@ def init_settings():
         parse_sitemap(settings_type, url, interval)
     else:
         # if not, get the content and save it to db
-        content = get_content(url)
-        content = ' '.join(content.split())
-        if ERROR_MESSAGE in content:
+        response, title, description, robots, image, content = get_content(url)
+
+        if ERROR_CODE in content:
             exception = content.split('.', 1)[1]
-            insert_result_db(settings_id, url, ERROR_MESSAGE, 0, None, datetime.today(), exception)
+            insert_result_db(settings_id, url, datetime.now(), None, None, None, None, None, None, 0, None, 0, exception)
         else:
-            insert_result_db(settings_id, url, content, 1, None, datetime.today(), None)
+            insert_result_db(settings_id, url, datetime.now(), response, title, description, robots, image, content, 0, None, 1, None)
 
     # insert remaining settings and urls to db
     if settings_list:

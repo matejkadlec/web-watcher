@@ -1,43 +1,65 @@
+#!/usr/bin/python3
 from database import select_results_db, insert_many_results_db
-from queue_processing import ERROR_MESSAGE, get_content
+from queue_processing import ERROR_CODE, get_content
 from datetime import datetime
-import telegram_send
+import time
+import telebot
+import ssl
+
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def compare_results():
     results_list = []
     # get all results from db (for which setting meets given conditions)
     results = select_results_db()
+    bot = telebot.TeleBot('5038704908:AAEAAkRdrWtJs384RPIGqEUiX0xPSp5IrM8')
 
     for result in results:
-        # parse current content
-        content = get_content(result[2])
-        content = ' '.join(content.split())
+        # parse current page
+        response, title, description, robots, image, content = get_content(result[2])
 
         # append result to the results_list for it to be inserted to db later
-        if ERROR_MESSAGE in content:
+        if ERROR_CODE in content:
             # if there was an error, replace content with ERROR_MESSAGE and add retrieved exception
             exception = content.split('.', 1)[1]
-            results_list.append(tuple((result[1], result[2], ERROR_MESSAGE, 0, None, datetime.now(), exception)))
-        elif content == result[3]:
-            # contents match
-            results_list.append(tuple((result[1], result[2], content, 1, None, datetime.now(), None)))
+            results_list.append(tuple((result[1], result[2], datetime.now(), None, None, None, None,
+                                       None, None, 0, None, 0, exception)))
+        elif response == result[4] and title == result[5] and description == result[6] and robots == result[7] and \
+                image == result[8] and content == result[9]:
+            # everything match
+            results_list.append(tuple((result[1], result[2], datetime.now(), response, title, description, robots,
+                                       image, content, 0, None, 1, None)))
         else:
-            # contents don't match
-            old = ""
-            new = ""
-            # get first 200 characters since first difference
-            for i in range(min(len(content), len(result[3]))):
-                if content[i] != result[3][i]:
-                    for j in range(0, 200):
-                        old += result[3][i + j]
-                        new += content[i + j]
-                    break
-            difference = f"OLD VALUE: \n-> {old}...\n\nNEW VALUE: \n-> {new}..."
+            values = [response, title, description, robots, image, content]
+            names = ['Response', 'Title', 'Description', 'Robots', 'Image', 'Content']
+            changed = ""
+            for i in range(0, 6):
+                # values don't match
+                if values[i] != result[i + 4]:
+                    changed += f'{names[i]}, '
+                    if names[i] == 'Response':
+                        old = str(result[i + 4])
+                        new = str(values[i])
+                    else:
+                        old = ""
+                        new = ""
+                        # get first 200 or value length characters since first difference
+                        for j in range(min(len(values[i]), len(result[i + 4]))):
+                            if values[i][j] != result[i + 4][j]:
+                                for k in range(0, min(200, len(values[i]) - j, len(result[i + 4]) - j)):
+                                    old += result[i + 4][j + k]
+                                    new += values[i][j + k]
+                                break
+                    difference = f"OLD VALUE: \n-> {old}\n\nNEW VALUE: \n-> {new}"
 
-            # send message on telegram
-            telegram_send.send(messages=[f"Content of URL {result[2]} has changed.\n\n{difference}"])
-            results_list.append(tuple((result[1], result[2], content, 0, difference, datetime.now(), None)))
+                    # send message on telegram
+                    bot.send_message(-1001731120154, f"{names[i]} of URL {result[2]} changed.\n\n{difference}")
+                    time.sleep(3)
+
+            results_list.append(tuple((result[1], result[2], datetime.now(), response, title, description, robots,
+                                       image, content, 1, changed[:-2], 1, None)))
 
     # insert results to db
     insert_many_results_db(results_list)

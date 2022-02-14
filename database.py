@@ -35,16 +35,21 @@ def insert_many_settings_db(settings_list, cursor, connection):
 
 
 @with_cursor
-def insert_result_db(settings_id, url, content, is_valid, difference, error, cursor, connection):
-    cursor.execute("INSERT INTO results (settings_id, url, content, is_valid, difference, created) "
-                   "VALUES (%s, %s, %s, %s, %s, %s, %s)", (settings_id, url, content, is_valid, difference, datetime.now(), error))
+def insert_result_db(settings_id, url, created, response, title, description, robots, image, content, has_changed,
+                     changed, is_valid, error, cursor, connection):
+    cursor.execute("INSERT INTO results (settings_id, url, created, response, title, description, robots, image, "
+                   "content, has_changed, changed, is_valid, error) "
+                   "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                   (settings_id, url, created, response, title, description, robots, image, content, has_changed,
+                    changed, is_valid, error))
     connection.commit()
 
 
 @with_cursor
 def insert_many_results_db(results_list, cursor, connection):
-    sql_statement = "INSERT INTO results (settings_id, url, content, is_valid, difference, created, error) " \
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s)"
+    sql_statement = "INSERT INTO results (settings_id, url, created, response, title, description, robots, image, " \
+                    "content, has_changed, changed, is_valid, error) " \
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
     cursor.executemany(sql_statement, results_list)
     connection.commit()
 
@@ -81,12 +86,12 @@ def insert_many_queues_db(queue_list, cursor, connection):
 
 @with_cursor
 def select_from_queue(cursor, connection):
-    cursor.execute("SELECT * FROM queue LIMIT 10")
+    cursor.execute("SELECT * FROM queue LIMIT 50")
     records = cursor.fetchall()
     return records
 
 
 @with_cursor
 def delete_from_queue(cursor, connection):
-    cursor.execute("DELETE FROM queue LIMIT 10")
+    cursor.execute("DELETE FROM queue LIMIT 50")
     connection.commit()
