@@ -25,55 +25,44 @@ def select_from_settings(cursor, connection):
 
 
 @with_cursor
-def insert_settings_db(type, url, is_sitemap, interval, cursor, connection):
-    cursor.execute("INSERT INTO settings (`type`, url, is_sitemap, `interval`) "
-                   "VALUES (%s, %s, %s, %s)", (type, url, is_sitemap, interval))
+def insert_settings_db(url, is_sitemap, config_id, cursor, connection):
+    cursor.execute("INSERT INTO settings (url, is_sitemap, is_active, config_id) "
+                   "VALUES (%s, %s, %s, %s)", (url, is_sitemap, 1, config_id))
     connection.commit()
     return cursor.lastrowid
 
 
 @with_cursor
 def insert_many_settings_db(settings_list, cursor, connection):
-    sql_statement = "INSERT INTO settings (`type`, url, is_sitemap, `interval`) " \
+    sql_statement = "INSERT INTO settings (url, is_sitemap, is_active, config_id) " \
                     "VALUES (%s, %s, %s, %s)"
     cursor.executemany(sql_statement, settings_list)
     connection.commit()
 
 
 @with_cursor
-def insert_result_db(settings_id, url, created, response, title, description, robots, image, content, has_changed,
-                     changed, is_valid, error, cursor, connection):
-    cursor.execute("INSERT INTO results (settings_id, url, created, response, title, description, robots, image, "
-                   "content, has_changed, changed, is_valid, error) "
-                   "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                   (settings_id, url, created, response, title, description, robots, image, content, has_changed,
-                    changed, is_valid, error))
-    connection.commit()
-
-
-@with_cursor
-def insert_many_results_db(results_list, cursor, connection):
-    sql_statement = "INSERT INTO results (settings_id, url, created, response, title, description, robots, image, " \
-                    "content, has_changed, changed, is_valid, error) " \
-                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+def insert_many_url_results_db(results_list, cursor, connection):
+    sql_statement = "INSERT INTO url_results (settings_id, url, created, type, old_value, new_value, is_valid, error) " \
+                    "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
     cursor.executemany(sql_statement, results_list)
     connection.commit()
 
 
 @with_cursor
-def select_results_db(cursor, connection):
+def select_url_results_db(cursor, connection):
     cursor.execute("SELECT r1.* "
-                   "FROM results r1 "
+                   "FROM url_results r1 "
                    "INNER JOIN "
                    "( "
                    "    SELECT DISTINCT MAX(created) MaxResultDate "
-                   "    FROM results "
+                   "    FROM url_results "
                    "    INNER JOIN settings s1 "
                    "        ON settings_id = s1.id "
-                   "            AND s1.last_run IS NULL "
-                   "            OR TIMESTAMPDIFF(SECOND, last_run, SYSDATE()) >= s1.`interval` "
-                   "     WHERE error IS NULL "
-                   "     GROUP BY settings_id "
+                   "    INNER JOIN config c1 "
+                   "        ON c1.id = s1.config_id "
+                   "    WHERE error IS NULL AND (s1.last_run IS NULL "
+                   "        OR TIMESTAMPDIFF(SECOND, s1.last_run, SYSDATE()) > JSON_VALUE(c1.config, '$.robots')) "
+                   "    GROUP BY settings_id "
                    ") r2 "
                    "    ON r1.created = r2.MaxResultDate "
                    "WHERE r1.error IS NULL "
@@ -92,8 +81,12 @@ def insert_many_queues_db(queue_list, cursor, connection):
 
 @with_cursor
 def select_from_queue(cursor, connection):
-    cursor.execute("SELECT * FROM queue LIMIT 50")
+    cursor.execute("SELECT queue.settings_id, queue.url, config FROM queue "
+                   "JOIN settings ON queue.settings_id = settings.id "
+                   "JOIN config ON settings.config_id = config.id "
+                   "LIMIT 50")
     records = cursor.fetchall()
+
     return records
 
 
@@ -101,3 +94,10 @@ def select_from_queue(cursor, connection):
 def delete_from_queue(cursor, connection):
     cursor.execute("DELETE FROM queue LIMIT 50")
     connection.commit()
+
+
+@with_cursor
+def insert_config_db(config, cursor, connection):
+    cursor.execute("INSERT INTO config (config) VALUES (%s)", (config,))
+    connection.commit()
+    return cursor.lastrowid

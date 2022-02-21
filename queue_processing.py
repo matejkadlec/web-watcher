@@ -1,18 +1,20 @@
 #!/usr/bin/python3
-from database import select_from_queue, delete_from_queue, insert_many_results_db
+from database import select_from_queue, delete_from_queue, insert_many_url_results_db
 import gzip
 from urllib.request import Request, urlopen
+import urllib.error
 from bs4 import BeautifulSoup
 from datetime import datetime
 import ssl
-
+import json
 
 ssl._create_default_https_context = ssl._create_unverified_context
-ERROR_CODE = "HSp6625YJuKZ7h84UJ4v"
+attributes = {"response": None, "title": None, "description": None, "robots": None, "image": None, "content": None}
 
 
 def process_queue():
-    global ERROR_CODE
+    global attributes
+    init_attributes = attributes
 
     # while there are any records in queue table
     while select_from_queue():
@@ -21,28 +23,43 @@ def process_queue():
         queues = select_from_queue()
 
         for queue in queues:
-            # parse page content
-            response, title, description, robots, image, content = get_content(queue[2])
+            config = json.loads(queue[2])
+            result = parse_url(queue[1], config)
 
+            now = datetime.now()
             # append result to the results_list for it to be inserted to db later
-            if ERROR_CODE in content:
-                # if there was an error, replace content with ERROR_MESSAGE and add retrieved exception
-                exception = content.split('KZ7h84UJ4v', 1)[1]
-                results_list.append(tuple((queue[1], queue[2], datetime.now(), response, None, None, None,
-                                           None, None, 0, None, 0, exception)))
+            if result != 0:
+                for key in config:
+                    if config[key] != '0':
+                        if key == "response":
+                            results_list.append(tuple((queue[0], queue[1], now, key, attributes[key], None,
+                                                       0, result)))
+                        else:
+                            results_list.append(tuple((queue[0], queue[1], now, key, None, None, 0, result)))
             else:
-                results_list.append(tuple((queue[1], queue[2], datetime.now(), response, title, description, robots,
-                                           image, content, 0, None, 1, None)))
+                for key in attributes:
+                    if attributes[key]:
+                        results_list.append(tuple((queue[0], queue[1], now, key, attributes[key], None, 1,
+                                                   None)))
+
+            attributes = init_attributes
 
         # after loop is finished, insert results to db and clear queue
-        insert_many_results_db(results_list)
+        insert_many_url_results_db(results_list)
         delete_from_queue()
 
 
-def get_content(url):
-    global ERROR_CODE
+def parse_url(url, config):
+    global attributes
     req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-    response = urlopen(req).code
+
+    # response
+    if config["response"] != '0':
+        try:
+            attributes["response"] = urlopen(req).code
+        except urllib.error.HTTPError as e:
+            attributes["response"] = e.code
+            return str(e)
 
     # get HTML of compressed page
     try:
@@ -51,40 +68,37 @@ def get_content(url):
     except gzip.BadGzipFile:
         try:
             html = urlopen(req).read().decode('utf-8')
-        # any exception
         except Exception as e:
-            return response, None, None, None, None, ERROR_CODE + str(e)
-    # any other exception
+            return str(e)
     except Exception as e:
-        return response, None, None, None, None, ERROR_CODE + str(e)
+        return str(e)
 
     # make BeautifulSoup from html
     soup = BeautifulSoup(html, features="html.parser")
 
     # title
-    title = soup.find("title").string
+    if config["title"] != '0':
+        attributes["title"] = soup.find("title").string
 
     # description, robots, og:image
-    description = robots = image = ''
     for tag in soup.find_all("meta"):
-        if tag.get("name") == "description":
-            description = tag.get("content")
-        elif tag.get("name") == "robots":
-            robots = tag.get("content")
-        elif tag.get("property") == "og:image":
-            image = tag.get("content")
+        if tag.get("name") == "description" and config["description"] != '0':
+            attributes["description"] = tag.get("content")
+        elif tag.get("name") == "robots" and config["robots"] != '0':
+            attributes["robots"] = tag.get("content")
+        elif tag.get("property") == "og:image" and config["image"] != '0':
+            attributes["image"] = tag.get("content")
 
     # content
-    hidden_tags = soup.select('.hidden')
-    content = soup.get_text()
-    for hidden_tag in hidden_tags:
-        if hidden_tag.string:
-            content = content.replace(hidden_tag.string, "")
+    if config["content"] != '0':
+        hidden_tags = soup.select('.hidden')
+        attributes["content"] = soup.get_text()
+        for hidden_tag in hidden_tags:
+            if hidden_tag.string:
+                attributes["content"] = attributes["content"].replace(hidden_tag.string, "")
+                attributes["content"] = ' '.join(attributes["content"].split())
 
-    # remove line breaks and empty spaces
-    content = ' '.join(content.split())
-
-    return response, title, description, robots, image, content
+    return 0
 
 
 process_queue()

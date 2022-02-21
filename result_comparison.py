@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-from database import select_results_db, insert_many_results_db
-from queue_processing import ERROR_CODE, get_content
+from database import select_url_results_db, insert_many_url_results_db
+from queue_processing import parse_url
 from datetime import datetime
 import time
 import telebot
@@ -13,12 +13,12 @@ ssl._create_default_https_context = ssl._create_unverified_context
 def compare_results():
     results_list = []
     # get all results from db (for which setting meets given conditions)
-    results = select_results_db()
+    results = select_url_results_db()
     bot = telebot.TeleBot('5038704908:AAEAAkRdrWtJs384RPIGqEUiX0xPSp5IrM8')
 
     for result in results:
         # parse current page
-        response, title, description, robots, image, content = get_content(result[2])
+        response, title, description, robots, image, content = parse_url(result[2])
 
         # append result to the results_list for it to be inserted to db later
         if ERROR_CODE in content:
@@ -66,7 +66,7 @@ def compare_results():
                                        image, content, 1, changed[:-2], 1, None)))
 
     # insert results to db
-    insert_many_results_db(results_list)
+    insert_many_url_results_db(results_list)
 
 
 compare_results()
