@@ -49,24 +49,24 @@ def insert_many_url_results_db(results_list, cursor, connection):
 
 
 @with_cursor
-def select_url_results_db(cursor, connection):
-    cursor.execute("SELECT r1.* "
+def select_url_results_db(key, cursor, connection):
+    cursor.execute("SELECT DISTINCT r1.settings_id, r1.url, r1.type, r1.old_value, r1.new_value "
                    "FROM url_results r1 "
                    "INNER JOIN "
                    "( "
-                   "    SELECT DISTINCT MAX(created) MaxResultDate "
+                   "    SELECT MAX(created) MaxResultDate "
                    "    FROM url_results "
                    "    INNER JOIN settings s1 "
                    "        ON settings_id = s1.id "
                    "    INNER JOIN config c1 "
                    "        ON c1.id = s1.config_id "
-                   "    WHERE error IS NULL AND (s1.last_run IS NULL "
-                   "        OR TIMESTAMPDIFF(SECOND, s1.last_run, SYSDATE()) > JSON_VALUE(c1.config, '$.robots')) "
+                   "    WHERE type = %s AND (s1.last_run IS NULL "
+                   "        OR TIMESTAMPDIFF(SECOND, s1.last_run, SYSDATE()) > JSON_VALUE(c1.config, %s)) "
                    "    GROUP BY settings_id "
                    ") r2 "
-                   "    ON r1.created = r2.MaxResultDate "
-                   "WHERE r1.error IS NULL "
-                   "ORDER BY r1.created DESC")
+                   "ON r1.created = r2.MaxResultDate "
+                   "WHERE type = %s "
+                   "ORDER BY r1.created DESC", (key, f'$.{key}', key))
     records = cursor.fetchall()
     return records
 

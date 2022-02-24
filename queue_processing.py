@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from database import select_from_queue, delete_from_queue, insert_many_url_results_db
+from telegram_bot import send_error_message
 import gzip
 from urllib.request import Request, urlopen
 import urllib.error
@@ -14,38 +15,38 @@ attributes = {"response": None, "title": None, "description": None, "robots": No
 
 def process_queue():
     global attributes
-    init_attributes = attributes
 
     # while there are any records in queue table
     while select_from_queue():
-        results_list = []
+        url_results_list = []
         # select records from queue
         queues = select_from_queue()
 
         for queue in queues:
             config = json.loads(queue[2])
             result = parse_url(queue[1], config)
+            settings_id = queue[0]
+            url = queue[1]
 
-            now = datetime.now()
-            # append result to the results_list for it to be inserted to db later
+            # append result to the url_results_list for it to be inserted to db later
             if result != 0:
+                send_error_message(url, result)
                 for key in config:
                     if config[key] != '0':
                         if key == "response":
-                            results_list.append(tuple((queue[0], queue[1], now, key, attributes[key], None,
-                                                       0, result)))
+                            url_results_list.append(tuple((settings_id, url, datetime.now(), key, attributes[key], None, 0, result)))
                         else:
-                            results_list.append(tuple((queue[0], queue[1], now, key, None, None, 0, result)))
+                            url_results_list.append(tuple((settings_id, url, datetime.now(), key, None, None, 0, result)))
             else:
                 for key in attributes:
                     if attributes[key]:
-                        results_list.append(tuple((queue[0], queue[1], now, key, attributes[key], None, 1,
-                                                   None)))
-
-            attributes = init_attributes
+                        url_results_list.append(tuple((settings_id, url, datetime.now(), key, attributes[key], None, 1, None)))
+            # reset attributes
+            for k in attributes:
+                attributes[k] = None
 
         # after loop is finished, insert results to db and clear queue
-        insert_many_url_results_db(results_list)
+        insert_many_url_results_db(url_results_list)
         delete_from_queue()
 
 
@@ -96,7 +97,7 @@ def parse_url(url, config):
         for hidden_tag in hidden_tags:
             if hidden_tag.string:
                 attributes["content"] = attributes["content"].replace(hidden_tag.string, "")
-                attributes["content"] = ' '.join(attributes["content"].split())
+        attributes["content"] = ' '.join(attributes["content"].split())
 
     return 0
 
