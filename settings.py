@@ -1,7 +1,7 @@
 import urllib.error
 from database import select_from_settings, insert_settings, insert_many_settings, insert_many_queues, \
     insert_config, insert_many_sitemap_results
-import sys
+from queue_processing import process_queue
 from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -16,7 +16,7 @@ queue_list = []
 sitemap_results = []
 
 
-def init_settings():
+def init_settings(url, config_parameters):
     global config_id
     global settings_id
     global settings_list
@@ -24,10 +24,9 @@ def init_settings():
     global queue_list
 
     # get settings parameters
-    url = sys.argv[1]
     is_sitemap = 1 if url.endswith(".xml") else 0
     for i in range(0, len(config)):
-        config[list(config)[i]] = sys.argv[i + 2]
+        config[list(config)[i]] = config_parameters[i]
 
     # check if settings already exists
     for settings_db in settings_list_db:
@@ -55,6 +54,8 @@ def init_settings():
         insert_many_queues(queue_list)
     if sitemap_results:
         insert_many_sitemap_results(sitemap_results)
+
+    process_queue()
 
 
 def append_settings(url, base_url, base_url_settings_id):
@@ -141,6 +142,3 @@ def parse_sitemap(base_url, base_url_settings_id):
         append_settings(sitemap_url, base_url, base_url_settings_id)
     for url in urls:
         append_settings(url, base_url, base_url_settings_id)
-
-
-init_settings()
