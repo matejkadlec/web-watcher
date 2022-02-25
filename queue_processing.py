@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from database import select_from_queue, delete_from_queue, insert_many_url_results_db
+from database import select_from_queue, delete_from_queue, insert_many_url_results
 from telegram_bot import send_error_message
 import gzip
 from urllib.request import Request, urlopen
@@ -46,7 +46,7 @@ def process_queue():
                 attributes[k] = None
 
         # after loop is finished, insert results to db and clear queue
-        insert_many_url_results_db(url_results_list)
+        insert_many_url_results(url_results_list)
         delete_from_queue()
 
 

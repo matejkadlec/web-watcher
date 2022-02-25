@@ -10,7 +10,18 @@ def send_error_message(url, error):
     time.sleep(3)
 
 
-def send_changed_message(key, url, difference):
+def send_url_changed_message(key, url, difference):
     # send message on telegram
     bot.send_message(-1001731120154, f"{key.capitalize()} of URL {url} changed.\n\n{difference}")
+    time.sleep(3)
+
+
+def send_sitemap_changed_message(sitemap, new, missing):
+    # send message on telegram
+    if new != "" and missing != "":
+        bot.send_message(-1001731120154, f"Sitemap {sitemap} changed.\n\nNEW:\n{new}\nMISSING:\n{missing}")
+    elif new != "":
+        bot.send_message(-1001731120154, f"Sitemap {sitemap} changed.\n\nNEW:\n{new}")
+    else:
+        bot.send_message(-1001731120154, f"Sitemap {sitemap} changed.\n\nMISSING:\n{missing}")
     time.sleep(3)

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-from database import select_url_results_db, insert_many_url_results_db
-from telegram_bot import send_error_message, send_changed_message
+from database import select_url_results, insert_many_url_results
+from telegram_bot import send_error_message, send_url_changed_message
 import gzip
 from urllib.request import Request, urlopen
 import urllib.error
@@ -13,13 +13,13 @@ attributes = {"response": None, "title": None, "description": None, "robots": No
 error_url_list = []
 
 
-def compare_results():
+def compare_url_results():
     global attributes
     global error_url_list
 
     results = []
     for key in attributes:
-        results.append(select_url_results_db(key))
+        results.append(select_url_results(key))
 
     index = 0
     for key in attributes:
@@ -50,8 +50,8 @@ def compare_results():
                         url_results_list.append(tuple((settings_id, url, datetime.now(), key, old_value, None, 0, result)))
                     else:
                         # responses don't match
-                        difference = calculate_difference(new_value, old_value)
-                        send_changed_message(key, url, difference)
+                        difference = get_difference(new_value, old_value)
+                        send_url_changed_message(key, url, difference)
                         url_results_list.append(tuple((settings_id, url, datetime.now(), key, old_value, new_value, 0, result)))
                 else:
                     url_results_list.append(tuple((settings_id, url, datetime.now(), key, None, None, 0, result)))
@@ -60,8 +60,8 @@ def compare_results():
                 url_results_list.append(tuple((settings_id, url, datetime.now(), key, old_value, None, 1, None)))
             else:
                 # values don't match
-                difference = calculate_difference(new_value, old_value)
-                send_changed_message(key, url, difference)
+                difference = get_difference(new_value, old_value)
+                send_url_changed_message(key, url, difference)
                 url_results_list.append(tuple((settings_id, url, datetime.now(), key, old_value, new_value, 1, None)))
 
             # reset attributes
@@ -69,7 +69,7 @@ def compare_results():
                 attributes[k] = None
 
         # insert url_results to db
-        insert_many_url_results_db(url_results_list)
+        insert_many_url_results(url_results_list)
 
 
 def parse_attribute(url, attribute):
@@ -130,7 +130,7 @@ def parse_attribute(url, attribute):
     return 0
 
 
-def calculate_difference(new_value, old_value):
+def get_difference(new_value, old_value):
     old = ""
     new = ""
     # get first 200 or value length characters since first difference
@@ -144,4 +144,4 @@ def calculate_difference(new_value, old_value):
     return f"OLD VALUE: \n-> {old}\n\nNEW VALUE: \n-> {new}"
 
 
-compare_results()
+compare_url_results()
