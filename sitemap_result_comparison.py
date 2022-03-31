@@ -13,6 +13,9 @@ ssl._create_default_https_context = ssl._create_unverified_context
 def get_sitemap_results():
     sitemap_results = select_sitemap_results()
 
+    if not sitemap_results:
+        return
+
     current_settings_id = sitemap_results[0][1]
     current_sitemap = sitemap_results[0][2]
     current_urls = []

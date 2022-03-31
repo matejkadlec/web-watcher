@@ -124,6 +124,7 @@ def select_sitemap_results(cursor, connection):
                    "   GROUP BY sitemap_results.url "
                    ") r2 "
                    "ON r1.created = r2.MaxResultDate "
+                   "WHERE missing != 1 "
                    "ORDER BY settings_id ")
     records = cursor.fetchall()
     return records
