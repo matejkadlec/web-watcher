@@ -13,15 +13,15 @@ def get_urls(base_url):
         return
     soup = BeautifulSoup(xml, features="html.parser")
 
-    # initialize lists for sitemaps and urls for current sitemap
+    # Initialize lists for sitemaps and urls for current sitemap
     sitemap_urls = []
     urls = []
 
-    # find all sitemaps and urls
+    # Find all sitemaps and urls
     sitemap_tags = soup.find_all("sitemap")
     url_tags = soup.find_all("url")
 
-    # append links to lists
+    # Append links to lists
     for sitemap_tag in sitemap_tags:
         sitemap_urls.append(sitemap_tag.findNext("loc").text)
     for url_tag in url_tags:
@@ -31,10 +31,10 @@ def get_urls(base_url):
 
 
 def get_soup(req):
-    # get HTML of compressed page
+    # Get HTML of compressed page
     try:
         html = gzip.decompress(urlopen(req).read()).decode('utf-8')
-    # if isn't compressed
+    # If isn't compressed
     except gzip.BadGzipFile:
         try:
             html = urlopen(req).read().decode('utf-8')
@@ -43,5 +43,5 @@ def get_soup(req):
     except Exception as e:
         return str(e)
 
-    # make BeautifulSoup from html
+    # Make BeautifulSoup from html
     return BeautifulSoup(html, features="html.parser")

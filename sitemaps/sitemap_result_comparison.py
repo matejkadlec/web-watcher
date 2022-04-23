@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from database import select_sitemap_results, insert_many_sitemap_results
-from telegram_bot import send_sitemap_changed_message
-from utils import get_urls
+from utils.telegram_bot import TelegramBot
+from utils.utils import get_urls
 from datetime import datetime
 import ssl
 
