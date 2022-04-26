@@ -74,31 +74,6 @@ def select_url_results(settings_id, key, cursor, connection):
 
 
 @with_cursor
-def insert_many_queues(queue_list, cursor, connection):
-    sql_statement = "INSERT INTO queue (settings_id, url) " \
-                    "VALUES (%s, %s)"
-    cursor.executemany(sql_statement, queue_list)
-    connection.commit()
-
-
-@with_cursor
-def select_from_queue(cursor, connection):
-    cursor.execute("SELECT queue.settings_id, queue.url, config, chat_id FROM queue "
-                   "JOIN settings ON queue.settings_id = settings.id "
-                   "JOIN config ON settings.config_id = config.id "
-                   "LIMIT 50")
-    records = cursor.fetchall()
-
-    return records
-
-
-@with_cursor
-def delete_from_queue(cursor, connection):
-    cursor.execute("DELETE FROM queue LIMIT 50")
-    connection.commit()
-
-
-@with_cursor
 def insert_config(config, chat_id, cursor, connection):
     cursor.execute("INSERT INTO config (config, chat_id) VALUES (%s, %s)", (config, chat_id))
     connection.commit()

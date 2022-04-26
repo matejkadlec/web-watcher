@@ -1,5 +1,5 @@
-from database import select_from_settings, insert_settings, insert_many_settings, insert_many_queues, \
-    insert_config, insert_many_sitemap_results
+from database import select_from_settings, insert_settings, insert_many_settings, insert_config, \
+    insert_many_sitemap_results
 from urls.url_queue_adding import add_urls_to_queue
 from utils.static_fields import initial_config
 from utils.utils import get_urls
