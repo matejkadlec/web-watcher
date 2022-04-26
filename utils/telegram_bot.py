@@ -6,9 +6,10 @@ class TelegramBot:
     def __init__(self, chat_id):
         self.bot = telebot.TeleBot(chat_id)
 
-    def send_error_message(self, url, error):
+    def send_error_message(self, url, error, attempt):
         # send message on telegram
-        self.bot.send_message(-1001731120154, f"URL {url} wasn't parsed successfully.\n\nError message: {error}")
+        self.bot.send_message(-1001731120154, f"URL {url} wasn't parsed successfully.\n\nAttempt: {attempt}\n\n"
+                                              f"Error message: {error}")
         time.sleep(3)
 
     def send_url_changed_message(self, key, url, difference):

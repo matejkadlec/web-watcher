@@ -14,17 +14,17 @@ def get_sitemap_results():
     if not sitemap_results:
         return
 
-    current_settings_id = sitemap_results[0][1]
-    current_sitemap = sitemap_results[0][2]
+    current_settings_id = sitemap_results[0][0]
+    current_sitemap = sitemap_results[0][1]
     current_urls = []
     all_urls = []
 
     for sitemap_result in sitemap_results:
         new_urls = ""
         missing_urls = ""
-        if sitemap_result[1] != current_settings_id or sitemap_result == sitemap_results[-1]:
+        if sitemap_result[0] != current_settings_id or sitemap_result == sitemap_results[-1]:
             if sitemap_result == sitemap_results[-1]:
-                current_urls.append(sitemap_result[3])
+                current_urls.append(sitemap_result[2])
 
             sitemap_urls, urls = get_urls(current_sitemap)
             new_urls_arr = sitemap_urls + urls
@@ -45,13 +45,14 @@ def get_sitemap_results():
                 all_urls = []
 
             if new_urls != "" or missing_urls != "":
-                send_sitemap_changed_message(current_sitemap, new_urls, missing_urls)
+                tb = TelegramBot(sitemap_result[3])
+                tb.send_sitemap_changed_message(current_sitemap, new_urls, missing_urls)
 
-            current_settings_id = sitemap_result[1]
-            current_sitemap = sitemap_result[2]
-            current_urls = [sitemap_result[3]]
+            current_settings_id = sitemap_result[0]
+            current_sitemap = sitemap_result[1]
+            current_urls = [sitemap_result[2]]
         else:
-            current_urls.append(sitemap_result[3])
+            current_urls.append(sitemap_result[2])
 
     insert_many_sitemap_results(all_urls)
 

@@ -23,25 +23,33 @@ class URLQueue:
             config = json.loads(config_db[1])
             url_queue_record = select_from_url_queue(config_db[0], True)
 
+            if not url_queue_record:
+                continue
+
             settings_id = url_queue_record[0][0]
             url = url_queue_record[0][1]
 
-            result = self.parse_url(url, config)
+            result, response_valid = self.parse_url(url, config)
 
             # Append result to the url_results_list for it to be inserted to db later
             if result != 0:
                 tb = TelegramBot(config_db[2])
-                tb.send_error_message(url, result)
+                tb.send_error_message(url, result, 1)
                 for key in config:
                     if config[key] != '0':
                         if key == "response":
-                            insert_url_result(settings_id, url, datetime.now(), key, self.attributes[key], None, result)
+                            if response_valid:
+                                insert_url_result(settings_id, url, datetime.now(), key, self.attributes[key], None,
+                                                  None, 1)
+                            else:
+                                insert_url_result(settings_id, url, datetime.now(), key, self.attributes[key], None,
+                                                  result, 1)
                         else:
-                            insert_url_result(settings_id, url, datetime.now(), key, None, None, result)
+                            insert_url_result(settings_id, url, datetime.now(), key, None, None, result, 1)
             else:
                 for key in config:
                     if config[key] != '0':
-                        insert_url_result(settings_id, url, datetime.now(), key, self.attributes[key], None, None)
+                        insert_url_result(settings_id, url, datetime.now(), key, self.attributes[key], None, None, 1)
 
             # Reset attributes
             for k in self.attributes:
@@ -58,12 +66,12 @@ class URLQueue:
                 self.attributes["response"] = urlopen(req).code
             except urllib.error.HTTPError as e:
                 self.attributes["response"] = e.code
-                return str(e)
+                return str(e), False
 
         # Get BeautifulSoup or error text when html parsing isn't successful
         soup = get_soup(req)
         if type(soup) == str:
-            return soup
+            return soup, True
 
         # Parse title
         if config["title"] != '0':
@@ -94,7 +102,7 @@ class URLQueue:
 
             self.attributes["content"] = ' '.join(self.attributes["content"].split())
 
-        return 0
+        return 0, True
 
 
 uq = URLQueue()

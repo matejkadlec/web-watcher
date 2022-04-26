@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 from database import select_url_results, insert_url_results, select_distinct_configs, select_from_url_queue, \
-    delete_from_url_queue
+    delete_from_url_queue, select_erroneous_urls, select_erroneous_configs
 from utils.telegram_bot import TelegramBot
 from utils.static_fields import initial_config
 from utils.utils import get_soup
@@ -18,6 +18,86 @@ class URLComparison:
         self.attributes = initial_config
         self.error_url_list = []
 
+    def compare_erroneous_urls(self):
+        # Get distinct configs from url queue
+        configs_db = select_erroneous_configs()
+
+        for config_db in configs_db:
+            # Get config and interval key
+            settings_id = config_db[0]
+            config = json.loads(config_db[1])
+            interval_key = max(config, key=config.get)
+
+            erroneous_urls = select_erroneous_urls(settings_id, interval_key)
+
+            if not erroneous_urls:
+                continue
+
+            url_results_list = []
+
+            for url_result in erroneous_urls:
+                # Get values from url result
+                settings_id = url_result[0]
+                url = url_result[1]
+                attribute = url_result[2]
+                old_value = url_result[3]
+                attempt = url_result[4]
+
+                # Get result for current url
+                result = self.parse_attribute(url, attribute)
+                new_value = self.attributes[attribute]
+
+                # Initialize Telegram bot
+                tb = TelegramBot(url_result[5])
+
+                # We get response even when parsing wasn't successful
+                if attribute == "response":
+                    if new_value == old_value:
+                        # Responses match
+                        if result == 0:
+                            url_results_list.append(
+                                tuple((settings_id, url, datetime.now(), attribute, old_value, None, None, 1)))
+                        else:
+                            if url not in self.error_url_list:
+                                tb.send_error_message(url, result, attempt + 1)
+                                self.error_url_list.append(url)
+                            url_results_list.append(
+                                tuple((settings_id, url, datetime.now(), attribute, old_value, None, result, attempt + 1)))
+                    else:
+                        # Responses don't match
+                        difference = get_difference(new_value, old_value)
+                        tb.send_url_changed_message(attribute, url, difference)
+                        if result == 0:
+                            url_results_list.append(
+                                tuple((settings_id, url, datetime.now(), attribute, old_value, new_value, None, 1)))
+                        else:
+                            if url not in self.error_url_list:
+                                tb.send_error_message(url, result, attempt + 1)
+                                self.error_url_list.append(url)
+                            url_results_list.append(
+                                tuple((settings_id, url, datetime.now(), attribute, old_value, new_value, result,
+                                       attempt + 1)))
+                # Parsing wasn't successful
+                elif result != 0:
+                    # We only send one message for each erroneous url
+                    if url not in self.error_url_list:
+                        tb.send_error_message(url, result, attempt + 1)
+                        self.error_url_list.append(url)
+                    url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, result,
+                                                   attempt + 1)))
+                else:
+                    url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, None, 1)))
+
+                # Reset attributes
+                for k in self.attributes:
+                    self.attributes[k] = None
+
+            # Empty error url list
+            self.error_url_list = []
+
+            # Insert url_results to db
+            insert_url_results(url_results_list)
+
     def compare_url_results(self):
         # Get distinct configs from url queue
         configs_db = select_distinct_configs()
@@ -25,6 +105,9 @@ class URLComparison:
         for config_db in configs_db:
             # Get first url record for each config
             url_queue_record = select_from_url_queue(config_db[0], False)
+
+            if not url_queue_record:
+                continue
 
             # Get settings id and url from the record
             settings_id = url_queue_record[0][0]
@@ -56,34 +139,37 @@ class URLComparison:
                 if result != 0:
                     # We only send one message for each erroneous url
                     if url not in self.error_url_list:
-                        tb.send_error_message(url, result)
+                        tb.send_error_message(url, result, 1)
                         self.error_url_list.append(url)
                     # We get response even when parsing wasn't successful
                     if attribute == "response":
                         if new_value == old_value:
                             # Responses match
-                            url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, result)))
+                            url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, result, 1)))
                         else:
                             # Responses don't match
                             difference = get_difference(new_value, old_value)
                             tb.send_url_changed_message(attribute, url, difference)
-                            url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, new_value, result)))
+                            url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, new_value, result, 1)))
                     else:
-                        url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, result)))
+                        url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, result, 1)))
                 elif new_value == old_value:
                     # Values match
-                    url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, None)))
+                    url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, None, None, 1)))
                 else:
                     # Values don't match
                     difference = get_difference(new_value, old_value)
                     tb.send_url_changed_message(attribute, url, difference)
-                    url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, new_value, None)))
+                    url_results_list.append(tuple((settings_id, url, datetime.now(), attribute, old_value, new_value, None, 1)))
 
                 # Reset attributes
                 for k in self.attributes:
                     self.attributes[k] = None
 
                 delete_from_url_queue(settings_id, False)
+
+            # Empty error url list
+            self.error_url_list = []
 
             # Insert url_results to db
             insert_url_results(url_results_list)
@@ -158,3 +244,4 @@ def get_difference(new_value, old_value):
 
 uc = URLComparison()
 uc.compare_url_results()
+uc.compare_erroneous_urls()

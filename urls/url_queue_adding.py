@@ -1,5 +1,9 @@
+#!/usr/bin/python3
 from database import select_urls_for_processing, select_from_config, insert_into_url_queue
 import json
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 
 def add_urls_to_queue(is_new):
