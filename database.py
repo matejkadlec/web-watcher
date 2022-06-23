@@ -63,7 +63,7 @@ def select_url_results(settings_id, key, cursor, connection):
                    "    INNER JOIN config c1 "
                    "        ON c1.id = s1.config_id "
                    "    WHERE settings_id = %s AND "
-                   "    TIMESTAMPDIFF(SECOND, s1.last_url_run, SYSDATE()) > JSON_VALUE(c1.config, %s) "
+                   "    TIMESTAMPDIFF(SECOND, s1.last_url_run, SYSDATE()) >= JSON_VALUE(c1.config, %s) "
                    "    GROUP BY settings_id, url_results.type "
                    ") r2 "
                    "ON r1.created = r2.MaxResultDate "
@@ -100,7 +100,7 @@ def select_sitemap_results(cursor, connection):
                    "       ON settings_id = s1.id "
                    "   JOIN config c1 "
                    "       ON s1.config_id = c1.id"
-                   "   WHERE s1.last_url_run IS NULL OR TIMESTAMPDIFF(SECOND, s1.last_url_run, SYSDATE()) > 24 "
+                   "   WHERE s1.last_url_run IS NULL OR TIMESTAMPDIFF(SECOND, s1.last_url_run, SYSDATE()) >= 24 "
                    "   GROUP BY sitemap_results.url "
                    ") r2 "
                    "ON r1.created = r2.MaxResultDate "
@@ -118,7 +118,7 @@ def select_urls_for_processing(config_id, key, cursor, connection):
                    "LEFT JOIN url_results ON settings.id = url_results.settings_id "
                    "WHERE is_active = 1 AND is_sitemap = 0 AND config_id = %s AND error IS NULL AND "
                    "(last_url_run IS NULL OR "
-                   "TIMESTAMPDIFF(SECOND, last_url_run, SYSDATE()) > JSON_VALUE(config.config, %s))",
+                   "TIMESTAMPDIFF(SECOND, last_url_run, SYSDATE()) >= JSON_VALUE(config.config, %s))",
                    (config_id, f'$.{key}'))
     records = cursor.fetchall()
     return records
@@ -147,7 +147,7 @@ def select_erroneous_urls(settings_id, key, cursor, connection):
                    "    INNER JOIN config c1 "
                    "        ON c1.id = s1.config_id "
                    "    WHERE error IS NOT NULL AND settings_id = %s AND "
-                   "    TIMESTAMPDIFF(SECOND, s1.last_error_run, SYSDATE()) > (JSON_VALUE(c1.config, %s) * attempt) "
+                   "    TIMESTAMPDIFF(SECOND, s1.last_error_run, SYSDATE()) >= (JSON_VALUE(c1.config, %s) * attempt) "
                    "    GROUP BY settings_id, type "
                    ") r2 "
                    "ON r1.created = r2.MaxResultDate "
