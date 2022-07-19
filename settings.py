@@ -72,7 +72,7 @@ class Settings:
             # Append settings to settings_list for it to be inserted to db later
             self.settings_list.append(tuple((url, is_sitemap, 1, self.config_id)))
             # If settings_list has 1k or more items, insert them to db and clear the list
-            if len(self.settings_list) >= 1000:
+            if len(self.settings_list) >= 100000:
                 insert_many_settings(self.settings_list)
                 self.settings_list = []
             # Increase global settings id
@@ -81,7 +81,7 @@ class Settings:
         # Append current url with its base url
         if base_url:
             self.sitemap_results.append(tuple((base_url_settings_id, base_url, url, datetime.now(), 0, 0)))
-            if len(self.sitemap_results) >= 1000:
+            if len(self.sitemap_results) >= 100000:
                 insert_many_sitemap_results(self.sitemap_results)
                 self.sitemap_results = []
 

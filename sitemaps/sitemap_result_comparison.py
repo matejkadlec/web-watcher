@@ -40,7 +40,7 @@ def get_sitemap_results():
                     new_urls += f"{url}\n"
                     all_urls.append(tuple((current_settings_id, current_sitemap, url, datetime.now(), 1, 0)))
 
-            if len(all_urls) >= 1000:
+            if len(all_urls) >= 100000:
                 insert_many_sitemap_results(all_urls)
                 all_urls = []
 
