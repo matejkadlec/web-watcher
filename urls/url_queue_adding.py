@@ -27,4 +27,4 @@ def add_urls_to_queue(is_new):
             insert_into_url_queue(url_queue_list)
 
 
-add_urls_to_queue(False)
+add_urls_to_queue(is_new=False)

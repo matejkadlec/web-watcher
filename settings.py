@@ -50,7 +50,7 @@ class Settings:
             insert_many_sitemap_results(self.sitemap_results)
 
         # Immediately add new urls to processing queue
-        add_urls_to_queue(True)
+        add_urls_to_queue(is_new=True)
 
     def append_settings(self, url, base_url, base_url_settings_id):
         # Check if settings already exist
