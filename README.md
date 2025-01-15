@@ -1,2 +1,3 @@
-# Scrape Monitor
-This tool is used to automatically detect various changes connected to a web page, such as text changes. 
+# Web Watcher
+
+A tool for monitoring website content changes and sending Telegram notifications when changes are detected.
